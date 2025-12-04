@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { checkBackendConnection } from "./chatbotApi";
+import { checkBackendConnection } from "./webexpApi";
 
 export type DeviceType = "unknown" | "mobile" | "desktop";
 export type MicStatus = "prompt" | "granted" | "denied";

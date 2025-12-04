@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getTask3DurationMs, getParticipantId } from "../../_lib/experimentStorage";
+import { useEffect, useState, useRef } from "react";
+import { getTask3DurationMs, getParticipantId, getTask3Entries, getTask3EntriesCount, getTask3TaskId } from "../../_lib/experimentStorage";
+import { updateTaskTime, createBulkExpenditures, ExpenditureItem } from "../../_lib/webexpApi";
 
 function formatDuration(ms: number): string {
   const totalSeconds = Math.round(ms / 1000);
@@ -15,16 +16,55 @@ function formatDuration(ms: number): string {
 
 export default function Task3EndPage() {
   const [duration, setDuration] = useState<number | null>(null);
-  const [participantId, setParticipantId] = useState<string | null>(null);
+  const [participantIdState, setParticipantIdState] = useState<string | null>(null);
   const [completionCode, setCompletionCode] = useState<string>("");
+  const [entriesCount, setEntriesCount] = useState<number>(0);
+  const hasSubmitted = useRef(false);
 
   useEffect(() => {
-    setDuration(getTask3DurationMs());
+    const durationMs = getTask3DurationMs();
     const id = getParticipantId();
-    setParticipantId(id);
-    // Generate a simple completion code
+    const taskId = getTask3TaskId();
+    const entries = getTask3Entries();
+    const count = getTask3EntriesCount();
+    
+    setDuration(durationMs);
+    setParticipantIdState(id);
+    setEntriesCount(count);
+    
+    // Generate completion code
     const code = `T3-${id || "XXX"}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
     setCompletionCode(code);
+    
+    // Submit data to backend (only once) - requires task_id, user_id
+    if (!hasSubmitted.current && taskId && id && durationMs != null) {
+      hasSubmitted.current = true;
+      
+      const submitData = async () => {
+        try {
+          // Update task time - pass task_id, user_id, and task_number
+          const timeSeconds = Math.round(durationMs / 1000);
+          await updateTaskTime(taskId, id, 3, timeSeconds);
+          
+          // Submit expenditures if any - pass task_id, user_id, and task_number
+          if (entries.length > 0) {
+            const expenditures: ExpenditureItem[] = entries.map((e) => ({
+              name: e.name,
+              date_of_expense: e.date, // Already in YYYY-MM-DD format
+              amount: parseFloat(e.amount.replace("$", "")),
+              category: e.category || undefined,
+              notes: e.note || undefined,
+              status: "Pending",
+            }));
+            await createBulkExpenditures(taskId, id, 3, expenditures);
+          }
+        } catch (err) {
+          console.error("Failed to submit task data:", err);
+        }
+      };
+      
+      submitData();
+    }
   }, []);
 
   return (
@@ -57,10 +97,10 @@ export default function Task3EndPage() {
         <div className="rounded-xl bg-zinc-50 p-4 space-y-3">
           <h3 className="text-sm font-semibold text-zinc-700">Task Summary</h3>
           
-          {participantId && (
+          {participantIdState && (
             <div className="flex justify-between">
               <span className="text-zinc-500">Participant ID</span>
-              <span className="font-medium">{participantId}</span>
+              <span className="font-medium">{participantIdState}</span>
             </div>
           )}
           
@@ -73,7 +113,7 @@ export default function Task3EndPage() {
           
           <div className="flex justify-between">
             <span className="text-zinc-500">Entries added</span>
-            <span className="font-medium">3</span>
+            <span className="font-medium">{entriesCount}</span>
           </div>
         </div>
 
@@ -94,4 +134,3 @@ export default function Task3EndPage() {
     </main>
   );
 }
-

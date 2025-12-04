@@ -3,41 +3,8 @@
 
 import type { ApiExpense, Message } from "./chatTypes";
 
-// TODO: Set your API URLs here
-const API_URL = "http://18.234.224.108:8000/api/llm";
-
-// Check if backend is reachable
-export async function checkBackendConnection(): Promise<{
-  connected: boolean;
-  error?: string;
-}> {
-  try {
-    // Try a simple fetch with a short timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-    const response = await fetch(`${API_URL}/health`, {
-      method: "GET",
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      return { connected: true };
-    } else {
-      return { connected: false, error: `Server returned ${response.status}` };
-    }
-  } catch (err) {
-    if (err instanceof Error) {
-      if (err.name === "AbortError") {
-        return { connected: false, error: "Connection timed out" };
-      }
-      return { connected: false, error: err.message };
-    }
-    return { connected: false, error: "Unknown error" };
-  }
-}
+// API URL - set in .env.local
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 export type SendChatResponse = {
   response?: string;
@@ -53,7 +20,7 @@ export async function sendChatMessage(
 
   console.log("permissions", messages);
 
-  const response = await fetch(`${API_URL}/chat`, {
+  const response = await fetch(`${API_URL}/llm/chat`, {
     method: "POST",
     headers: {
       // 'Authorization': `Bearer ${token}`,
@@ -90,7 +57,7 @@ export async function transcribeAudio(
   formData.append("file", audioBlob, fileName);
 
   // Send the file to your FastAPI endpoint
-  const response = await fetch(`${API_URL}/transcribe-audio/`, {
+  const response = await fetch(`${API_URL}/llm/transcribe-audio/`, {
     method: "POST",
     // Don't set Content-Type header - browser will set it with boundary for FormData
     body: formData,
@@ -104,6 +71,3 @@ export async function transcribeAudio(
 
   return await response.json(); // should return transcription text from backend
 }
-
-
-

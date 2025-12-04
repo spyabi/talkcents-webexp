@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getTask2DurationMs, getParticipantId } from "../../_lib/experimentStorage";
+import { useEffect, useState, useRef } from "react";
+import { getTask2DurationMs, getParticipantId, getTask2TaskId } from "../../_lib/experimentStorage";
+import { updateTaskTime } from "../../_lib/webexpApi";
 
 function formatDuration(ms: number): string {
   const totalSeconds = Math.round(ms / 1000);
@@ -15,16 +16,30 @@ function formatDuration(ms: number): string {
 
 export default function Task2EndPage() {
   const [duration, setDuration] = useState<number | null>(null);
-  const [participantId, setParticipantId] = useState<string | null>(null);
+  const [participantIdState, setParticipantIdState] = useState<string | null>(null);
   const [completionCode, setCompletionCode] = useState<string>("");
+  const hasSubmitted = useRef(false);
 
   useEffect(() => {
-    setDuration(getTask2DurationMs());
+    const durationMs = getTask2DurationMs();
     const id = getParticipantId();
-    setParticipantId(id);
-    // Generate a simple completion code
+    const taskId = getTask2TaskId();
+    
+    setDuration(durationMs);
+    setParticipantIdState(id);
+    
+    // Generate completion code
     const code = `T2-${id || "XXX"}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
     setCompletionCode(code);
+    
+    // Submit time to backend (only once) - pass task_id, user_id, and task_number
+    if (!hasSubmitted.current && taskId && id && durationMs != null) {
+      hasSubmitted.current = true;
+      const timeSeconds = Math.round(durationMs / 1000);
+      updateTaskTime(taskId, id, 2, timeSeconds).catch((err) => {
+        console.error("Failed to update task time:", err);
+      });
+    }
   }, []);
 
   return (
@@ -57,10 +72,10 @@ export default function Task2EndPage() {
         <div className="rounded-xl bg-zinc-50 p-4 space-y-3">
           <h3 className="text-sm font-semibold text-zinc-700">Task Summary</h3>
           
-          {participantId && (
+          {participantIdState && (
             <div className="flex justify-between">
               <span className="text-zinc-500">Participant ID</span>
-              <span className="font-medium">{participantId}</span>
+              <span className="font-medium">{participantIdState}</span>
             </div>
           )}
           

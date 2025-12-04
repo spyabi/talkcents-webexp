@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { setParticipantId } from "../../_lib/experimentStorage";
+import { setParticipantId, setTask3TaskId, clearTask3Entries } from "../../_lib/experimentStorage";
+import { createTask } from "../../_lib/webexpApi";
 
 export default function Task3IdPage() {
   const router = useRouter();
   const [inputId, setInputId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
     const trimmed = inputId.trim();
@@ -16,8 +18,25 @@ export default function Task3IdPage() {
       return;
     }
 
-    setParticipantId(trimmed);
-    router.push("/task3/entry");
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Create task in backend (task_number = 3 for manual entry)
+      const taskResponse = await createTask(trimmed, 3);
+      setParticipantId(trimmed);
+      // Store the task_id for later use
+      if (taskResponse.task_id) {
+        setTask3TaskId(taskResponse.task_id);
+      }
+      // Clear any previous entries when starting a new task
+      clearTask3Entries();
+      router.push("/task3/entry");
+    } catch (err) {
+      console.error("Failed to create task:", err);
+      setError("Failed to register. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -69,10 +88,10 @@ export default function Task3IdPage() {
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={!inputId.trim()}
+        disabled={!inputId.trim() || isLoading}
         className="mt-6 inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-emerald-200"
       >
-        Continue to Task
+        {isLoading ? "Registering..." : "Continue to Task"}
       </button>
     </main>
   );

@@ -5,29 +5,20 @@ import { useRouter } from "next/navigation";
 import {
   getParticipantId,
   setTask3DurationMs,
-  getTask3EntriesCount,
-  setTask3EntriesCount,
+  addTask3Entry,
+  getTask3Entries,
+  clearTask3Entries,
+  type Task3Entry,
 } from "../../_lib/experimentStorage";
 
 const FIXED_CATEGORIES = ["Food & Drinks", "Shopping", "Transport", "Others"];
 const REQUIRED_ENTRIES = 3;
 
-type Entry = {
-  id: string;
-  name: string;
-  amount: string;
-  date: string;
-  category: string;
-  note: string;
-  type: "Income" | "Expense";
-};
-
 export default function Task3EntryPage() {
   const router = useRouter();
   const [participantId, setParticipantIdState] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [entriesCount, setEntriesCountState] = useState(0);
+  const [entries, setEntries] = useState<Task3Entry[]>([]);
 
   // Form state
   const [type, setType] = useState<"Income" | "Expense">("Expense");
@@ -38,6 +29,7 @@ export default function Task3EntryPage() {
   const [note, setNote] = useState("");
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [currentEntryCount, setCurrentEntryCount] = useState(0);
 
   const [errors, setErrors] = useState({
     name: false,
@@ -49,8 +41,20 @@ export default function Task3EntryPage() {
   useEffect(() => {
     const id = getParticipantId();
     setParticipantIdState(id);
-    const count = getTask3EntriesCount();
-    setEntriesCountState(count);
+    
+    // Safety check: if no participant ID, clear any stale entries
+    // This ensures entries are reset for each new participant
+    if (!id) {
+      clearTask3Entries();
+      setEntries([]);
+      setCurrentEntryCount(0);
+    } else {
+      // Load existing entries from storage
+      const storedEntries = getTask3Entries();
+      setEntries(storedEntries);
+      setCurrentEntryCount(storedEntries.length);
+    }
+    
     if (typeof performance !== "undefined") {
       setStartTime(performance.now());
     }
@@ -80,7 +84,7 @@ export default function Task3EntryPage() {
   const handleAdd = () => {
     if (!validateFields()) return;
 
-    const newEntry: Entry = {
+    const newEntry: Task3Entry = {
       id: Date.now().toString(),
       name,
       amount: amount.replace("$", ""),
@@ -90,10 +94,14 @@ export default function Task3EntryPage() {
       type,
     };
 
-    setEntries((prev) => [...prev, newEntry]);
-    const newCount = entriesCount + 1;
-    setEntriesCountState(newCount);
-    setTask3EntriesCount(newCount);
+    // Store entry in sessionStorage for submission at the end
+    addTask3Entry(newEntry);
+    
+    // Update entries - count is automatically derived from entries.length
+    const updatedEntries = [...entries, newEntry];
+    setEntries(updatedEntries);
+    // Track the current entry count for the success modal
+    setCurrentEntryCount(updatedEntries.length);
     setShowSuccess(true);
   };
 
@@ -101,7 +109,8 @@ export default function Task3EntryPage() {
     setShowSuccess(false);
     resetForm();
 
-    if (entriesCount + 1 >= REQUIRED_ENTRIES) {
+    // Check completion based on the current entry count we tracked
+    if (currentEntryCount >= REQUIRED_ENTRIES) {
       // Task complete
       if (typeof performance !== "undefined" && startTime != null) {
         const end = performance.now();
@@ -111,7 +120,8 @@ export default function Task3EntryPage() {
     }
   };
 
-  const remainingEntries = REQUIRED_ENTRIES - entriesCount;
+  // Calculate remaining entries based on current entries array
+  const remainingEntries = REQUIRED_ENTRIES - entries.length;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col bg-white text-sm text-zinc-900">
@@ -119,7 +129,7 @@ export default function Task3EntryPage() {
       <header className="sticky top-0 z-10 bg-white px-4 py-4 border-b border-zinc-100">
         <h1 className="text-xl font-semibold text-center">Manual Entry</h1>
         <p className="mt-1 text-xs text-zinc-500 text-center">
-          Entries added: {entriesCount} / {REQUIRED_ENTRIES}
+          Entries added: {entries.length} / {REQUIRED_ENTRIES}
         </p>
         {remainingEntries > 0 && (
           <p className="mt-1 text-xs text-amber-600 text-center font-medium">
@@ -345,14 +355,14 @@ export default function Task3EntryPage() {
               {type === "Expense" ? "Expense" : "Income"} Logged Successfully!
             </p>
             <p className="mt-2 text-sm text-zinc-600">
-              Entry {entriesCount + 1} of {REQUIRED_ENTRIES} added.
+              Entry {currentEntryCount} of {REQUIRED_ENTRIES} added.
             </p>
             <button
               type="button"
               onClick={handleSuccessDone}
               className="mt-5 bg-[#BAE7EC] text-zinc-900 font-semibold py-2 px-6 rounded-xl"
             >
-              {entriesCount + 1 >= REQUIRED_ENTRIES ? "Finish Task" : "Add Next Entry"}
+              {currentEntryCount >= REQUIRED_ENTRIES ? "Finish Task" : "Add Next Entry"}
             </button>
           </div>
         </div>

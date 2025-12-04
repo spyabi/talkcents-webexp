@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import {
   getParticipantId,
   setTask1DurationMs,
+  getTask1TaskId,
 } from "../../_lib/experimentStorage";
 import type { Message, Expense, ApiExpense } from "../../_lib/chatTypes";
 import { sendChatMessage } from "../../_lib/chatbotApi";
+import { createBulkExpenditures, ExpenditureItem } from "../../_lib/webexpApi";
 
 export default function Task1ChatPage() {
   const router = useRouter();
@@ -37,16 +39,18 @@ export default function Task1ChatPage() {
         <p className="mt-1 text-xs text-zinc-500">Task 1: Typing Chatbot</p>
       </header>
 
-      <Task1TypingChatbot onTaskComplete={handleComplete} />
+      <Task1TypingChatbot participantId={participantId} onTaskComplete={handleComplete} />
     </main>
   );
 }
 
 interface Task1TypingChatbotProps {
+  participantId: string | null;
   onTaskComplete: () => void;
 }
 
-function Task1TypingChatbot({ onTaskComplete }: Task1TypingChatbotProps) {
+function Task1TypingChatbot({ participantId, onTaskComplete }: Task1TypingChatbotProps) {
+  const taskNumber = 1; // Task 1: Typing chatbot
   const [messageInput, setMessageInput] = useState("");
   const [inputHeight, setInputHeight] = useState(40);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -188,14 +192,30 @@ I'll parse everything and ask for your approval before saving!`,
     .map(({ idx }) => idx)
     .pop();
 
-  const handleApproveAll = () => {
+  const handleApproveAll = async () => {
+    // Save expenditures to backend before completing - pass task_id, user_id, and task_number
+    const taskId = getTask1TaskId();
+    if (taskId && participantId && expenses.length > 0) {
+      try {
+        const expenditureItems: ExpenditureItem[] = expenses.map((exp) => ({
+          name: exp.name,
+          date_of_expense: exp.date_of_expense,
+          amount: exp.amount,
+          category: exp.category || undefined,
+          notes: exp.notes || undefined,
+          status: "Pending",
+        }));
+        
+        await createBulkExpenditures(taskId, participantId, taskNumber, expenditureItems);
+      } catch (err) {
+        console.error("Failed to save expenditures:", err);
+        // Still complete the task even if saving fails
+      }
+    }
+    
     // Move to next page when Approve All is clicked
     onTaskComplete();
   };
-
-  const canFinish = messages.some(
-    (m) => m.role === "user" && m.content[0]?.type === "text"
-  );
 
   return (
     <div className="flex h-full flex-1 flex-col gap-3">
@@ -203,8 +223,8 @@ I'll parse everything and ask for your approval before saving!`,
         <h2 className="text-lg font-semibold">Task 1: Typing chatbot</h2>
         <p className="text-sm text-zinc-700">
           Chat with the chatbot by <span className="font-medium">typing</span>{" "}
-          your responses. When you feel the conversation is complete, tap{" "}
-          <span className="font-medium">Finish Task 1</span>.
+          your responses. When expenses are shown, tap{" "}
+          <span className="font-medium">Approve All</span> to complete the task.
         </p>
       </div>
 
@@ -290,20 +310,6 @@ I'll parse everything and ask for your approval before saving!`,
           </svg>
         </button>
       </div>
-
-      <button
-        type="button"
-        disabled={!canFinish}
-        onClick={onTaskComplete}
-        className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-emerald-200"
-      >
-        Finish Task 1
-      </button>
-      {!canFinish && (
-        <p className="text-center text-xs text-zinc-500">
-          Send at least one message before finishing Task 1.
-        </p>
-      )}
     </div>
   );
 }
