@@ -2,7 +2,7 @@
 // Handles task creation, time tracking, and expenditure submission
 
 const WEBEXP_API_URL = process.env.NEXT_PUBLIC_WEBEXP_API_URL || "http://localhost:8000/api";
-const WEBEXP_API_KEY = process.env.NEXT_PUBLIC_WEBEXP_API_KEY || "12345";
+const WEBEXP_API_KEY = process.env.NEXT_PUBLIC_WEBEXP_API_KEY || "";
 
 // Check if backend is reachable
 export async function checkBackendConnection(): Promise<{

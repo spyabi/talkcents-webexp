@@ -41,20 +41,10 @@ export default function Task3EntryPage() {
   useEffect(() => {
     const id = getParticipantId();
     setParticipantIdState(id);
-    
-    // Safety check: if no participant ID, clear any stale entries
-    // This ensures entries are reset for each new participant
-    if (!id) {
-      clearTask3Entries();
-      setEntries([]);
-      setCurrentEntryCount(0);
-    } else {
-      // Load existing entries from storage
-      const storedEntries = getTask3Entries();
-      setEntries(storedEntries);
-      setCurrentEntryCount(storedEntries.length);
-    }
-    
+    // Load existing entries from storage
+    const storedEntries = getTask3Entries();
+    setEntries(storedEntries);
+    setCurrentEntryCount(storedEntries.length);
     if (typeof performance !== "undefined") {
       setStartTime(performance.now());
     }
