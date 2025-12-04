@@ -1,191 +1,138 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useDeviceType, useMicPermission, useBackendConnection, DeviceType, MicStatus, BackendStatus } from "./_lib/useDeviceAndMic";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900">
-      <MainScreen />
-    </div>
-  );
-}
-
-function MainScreen() {
-  const deviceType = useDeviceType();
-  const { status: micStatus, request: requestMic } = useMicPermission();
-  const { status: backendStatus, error: backendError, check: checkBackend } = useBackendConnection();
-  const router = useRouter();
-
-  const isMobileBlocked = deviceType === "desktop";
-
-  return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col bg-white px-4 py-6 text-sm text-zinc-900">
-      <header className="mb-4 text-center">
+      <header className="mb-6 text-center">
         <h1 className="text-xl font-semibold">TalkCents Web Experiment</h1>
         <p className="mt-1 text-xs text-zinc-500">
-          Please complete this on a mobile device with microphone access.
+          Select a task to begin
         </p>
       </header>
 
-      <section className="flex-1">
-        <StartScreen
-          deviceType={deviceType}
-          micStatus={micStatus}
-          backendStatus={backendStatus}
-          backendError={backendError}
-          onMicRequest={requestMic}
-          onBackendCheck={checkBackend}
-          onStart={() => router.push("/id")}
-        />
+      <section className="flex-1 space-y-4">
+        {/* Task 1 - Typing Chatbot */}
+        <Link
+          href="/task1"
+          className="block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-emerald-500 hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="h-6 w-6 text-blue-600"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900">Task 1</h2>
+                <p className="mt-1 text-sm text-zinc-600">Typing Chatbot</p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Chat with an AI assistant by typing messages
+                </p>
+              </div>
+            </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="h-5 w-5 text-zinc-400"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </div>
+        </Link>
+
+        {/* Task 2 - Voice Chatbot */}
+        <Link
+          href="/task2"
+          className="block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-emerald-500 hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="h-6 w-6 text-purple-600"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M6 15.75V3.75m0 0h7.5M6 3.75l3 3m-3-3l3-3" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900">Task 2</h2>
+                <p className="mt-1 text-sm text-zinc-600">Voice Chatbot</p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Talk to an AI assistant using your voice
+                </p>
+              </div>
+            </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="h-5 w-5 text-zinc-400"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </div>
+        </Link>
+
+        {/* Task 3 - Manual Entry */}
+        <Link
+          href="/task3"
+          className="block rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-emerald-500 hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="h-6 w-6 text-emerald-600"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900">Task 3</h2>
+                <p className="mt-1 text-sm text-zinc-600">Manual Entry</p>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Manually enter expenses using a form
+                </p>
+              </div>
+            </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="h-5 w-5 text-zinc-400"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </div>
+        </Link>
       </section>
-
-      {isMobileBlocked && (
-        <div className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          This experiment is designed for mobile devices. Please open this page
-          on your phone to participate.
-        </div>
-      )}
     </main>
-  );
-}
-
-interface StartScreenProps {
-  deviceType: DeviceType;
-  micStatus: MicStatus;
-  backendStatus: BackendStatus;
-  backendError: string | null;
-  onMicRequest: () => void;
-  onBackendCheck: () => void;
-  onStart: () => void;
-}
-
-function StartScreen({
-  deviceType,
-  micStatus,
-  backendStatus,
-  backendError,
-  onMicRequest,
-  onBackendCheck,
-  onStart,
-}: StartScreenProps) {
-  const isMobile = deviceType === "mobile";
-  const canStart = isMobile && micStatus === "granted" && backendStatus === "connected";
-
-  return (
-    <div className="flex h-full flex-col justify-between gap-4">
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Welcome</h2>
-        <p className="text-sm text-zinc-700">
-          In this experiment, you will complete{" "}
-          <span className="font-medium">two short tasks</span> with chatbots:
-        </p>
-        <ol className="list-inside list-decimal text-sm text-zinc-700">
-          <li>Task 1: Type messages to a chatbot.</li>
-          <li>Task 2: Speak to a voice chatbot using your microphone.</li>
-        </ol>
-        <p className="text-sm text-zinc-700">
-          The experiment is{" "}
-          <span className="font-medium">mobile-only</span> and requires access
-          to your microphone.
-        </p>
-
-        <div className="mt-4 rounded-md bg-zinc-50 p-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Device check
-          </h3>
-          <p className="mt-1 text-sm">
-            Detected device:{" "}
-            <span className="font-medium">
-              {deviceType === "unknown"
-                ? "Checking..."
-                : deviceType === "mobile"
-                ? "Mobile"
-                : "Desktop"}
-            </span>
-          </p>
-        </div>
-
-        <div className="mt-2 rounded-md bg-zinc-50 p-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Microphone
-          </h3>
-          <p className="mt-1 text-sm">
-            Status:{" "}
-            <span className="font-medium">
-              {micStatus === "prompt"
-                ? "Not requested yet"
-                : micStatus === "granted"
-                ? "Granted"
-                : "Denied or unavailable"}
-            </span>
-          </p>
-          <button
-            type="button"
-            onClick={onMicRequest}
-            className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-zinc-900 px-3 py-2 text-xs font-medium text-white disabled:bg-zinc-300"
-          >
-            Allow microphone
-          </button>
-          {micStatus === "denied" && (
-            <p className="mt-1 text-xs text-red-600">
-              We could not access your microphone. Please check your browser
-              settings and try again.
-            </p>
-          )}
-        </div>
-
-        <div className="mt-2 rounded-md bg-zinc-50 p-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Backend connection
-          </h3>
-          <p className="mt-1 text-sm">
-            Status:{" "}
-            <span className={`font-medium ${
-              backendStatus === "connected" 
-                ? "text-emerald-600" 
-                : backendStatus === "disconnected" 
-                ? "text-red-600" 
-                : ""
-            }`}>
-              {backendStatus === "unknown"
-                ? "Not checked yet"
-                : backendStatus === "checking"
-                ? "Checking..."
-                : backendStatus === "connected"
-                ? "Connected"
-                : "Disconnected"}
-            </span>
-          </p>
-          <button
-            type="button"
-            onClick={onBackendCheck}
-            disabled={backendStatus === "checking"}
-            className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-zinc-900 px-3 py-2 text-xs font-medium text-white disabled:bg-zinc-300"
-          >
-            {backendStatus === "checking" ? "Checking..." : "Check backend connection"}
-          </button>
-          {backendStatus === "disconnected" && backendError && (
-            <p className="mt-1 text-xs text-red-600">
-              {backendError}. Please ensure the backend server is running and accessible.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <button
-        type="button"
-        disabled={!canStart}
-        onClick={onStart}
-        className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-emerald-200"
-      >
-        Start experiment
-      </button>
-      {!canStart && (
-        <p className="mt-1 text-center text-xs text-zinc-500">
-          To start, use a mobile device, allow microphone access, and ensure backend is connected.
-        </p>
-      )}
-    </div>
   );
 }
