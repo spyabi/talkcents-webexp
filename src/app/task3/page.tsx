@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useDeviceType, useBackendConnection, DeviceType, BackendStatus } from "../_lib/useDeviceAndMic";
 
-export default function Task1Home() {
+export default function Task3Home() {
   return (
     <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900">
       <MainScreen />
@@ -23,7 +23,7 @@ function MainScreen() {
       <header className="mb-4 text-center">
         <h1 className="text-xl font-semibold">TalkCents Web Experiment</h1>
         <p className="mt-1 text-xs text-zinc-500">
-          Task 1: Typing Chatbot
+          Task 3: Manual Entry
         </p>
       </header>
 
@@ -33,7 +33,7 @@ function MainScreen() {
           backendStatus={backendStatus}
           backendError={backendError}
           onBackendCheck={checkBackend}
-          onStart={() => router.push("/task1/id")}
+          onStart={() => router.push("/task3/id")}
         />
       </section>
 
@@ -71,11 +71,11 @@ function StartScreen({
         <h2 className="text-lg font-semibold">Welcome</h2>
         <p className="text-sm text-zinc-700">
           In this experiment, you will complete a{" "}
-          <span className="font-medium">typing chatbot task</span>.
+          <span className="font-medium">manual expense entry task</span>.
         </p>
         <p className="text-sm text-zinc-700">
-          You will chat with an AI assistant by <span className="font-medium">typing</span> your
-          messages to log your expenses.
+          You will be asked to add <span className="font-medium">3 expense entries</span> manually
+          using a form interface.
         </p>
         <p className="text-sm text-zinc-700">
           The experiment is{" "}
@@ -152,3 +152,4 @@ function StartScreen({
     </div>
   );
 }
+
