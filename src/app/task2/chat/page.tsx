@@ -443,49 +443,41 @@ function AudioPlayer({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrl = audioUrls.get(audioId);
 
-  const togglePlay = () => {
+  const togglePlay = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!audioRef.current || !audioUrl) return;
 
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      // Use promise-based play for mobile compatibility
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsPlaying(true);
-          })
-          .catch((err) => {
-            console.error("Error playing audio:", err);
-            setIsPlaying(false);
-          });
+    try {
+      if (isPlaying) {
+        audioRef.current.pause();
       } else {
-        // Fallback for browsers that don't return a promise
-        setIsPlaying(true);
+        await audioRef.current.play();
       }
+    } catch (err) {
+      console.error("Error playing audio:", err);
     }
   };
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !audioUrl) return;
 
-    const handleEnded = () => setIsPlaying(false);
-    const handlePause = () => setIsPlaying(false);
     const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => setIsPlaying(false);
 
-    audio.addEventListener("ended", handleEnded);
-    audio.addEventListener("pause", handlePause);
     audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("ended", handleEnded);
     
     return () => {
-      audio.removeEventListener("ended", handleEnded);
-      audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("ended", handleEnded);
     };
-  }, []);
+  }, [audioUrl]);
 
   if (!audioUrl) {
     return <p className="text-xs text-zinc-500">Audio unavailable</p>;
@@ -496,16 +488,15 @@ function AudioPlayer({
       <audio 
         ref={audioRef} 
         src={audioUrl}
-        preload="auto"
+        preload="metadata"
         playsInline
-        controls={false}
       />
       <button
         type="button"
         onClick={togglePlay}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white active:bg-emerald-700"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-700 active:scale-95"
       >
-        {isPlaying ? "⏸" : "▶"}
+        <span className="text-base">{isPlaying ? "⏸" : "▶"}</span>
       </button>
       <span className="text-xs text-zinc-600">Voice message</span>
     </div>

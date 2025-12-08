@@ -41,7 +41,7 @@ export default function Task1IdPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col bg-white px-4 py-6 pb-12 text-sm text-zinc-900">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col bg-white px-4 py-6 text-sm text-zinc-900">
       <header className="mb-4 text-center">
         <h1 className="text-xl font-semibold">TalkCents Web Experiment</h1>
         <p className="mt-1 text-xs text-zinc-500">Task 1: Typing Chatbot</p>
@@ -88,16 +88,16 @@ export default function Task1IdPage() {
             </p>
           </div>
         </div>
-      </section>
 
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={!inputId.trim() || isLoading}
-        className="mt-6 inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-emerald-200"
-      >
-        {isLoading ? "Registering..." : "Continue to Task"}
-      </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!inputId.trim() || isLoading}
+          className="w-full inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-emerald-200 disabled:cursor-not-allowed"
+        >
+          {isLoading ? "Registering..." : "Continue to Task"}
+        </button>
+      </section>
     </main>
   );
 }
