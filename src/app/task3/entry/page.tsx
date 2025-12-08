@@ -106,7 +106,7 @@ export default function Task3EntryPage() {
         const end = performance.now();
         setTask3DurationMs(end - startTime);
       }
-      router.push("/task3/end");
+      router.push("/task3/questions");
     }
   };
 

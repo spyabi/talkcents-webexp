@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { setParticipantId, setTask2TaskId } from "../../_lib/experimentStorage";
 import { createTask } from "../../_lib/webexpApi";
+import { useDeviceType } from "../../_lib/useDeviceAndMic";
 
 export default function Task2IdPage() {
   const router = useRouter();
+  const deviceType = useDeviceType();
   const [inputId, setInputId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,7 +25,8 @@ export default function Task2IdPage() {
 
     try {
       // Create task in backend (task_number = 2 for voice chatbot)
-      const taskResponse = await createTask(trimmed, 2);
+      // Pass device_type: "mobile" or "desktop"
+      const taskResponse = await createTask(trimmed, 2, deviceType === "mobile" ? "mobile" : "desktop");
       setParticipantId(trimmed);
       // Store the task_id for later use
       if (taskResponse.task_id) {

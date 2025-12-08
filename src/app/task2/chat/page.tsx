@@ -29,7 +29,7 @@ export default function Task2ChatPage() {
       const end = performance.now();
       setTask2DurationMs(end - startTime);
     }
-    router.push("/task2/end");
+    router.push("/task2/questions");
   };
 
   return (
@@ -79,13 +79,16 @@ I'll parse everything and ask for your approval before saving!`,
   const [audioUrls, setAudioUrls] = useState<Map<string, string>>(new Map());
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const handleBotResponse = async (updatedChatHistory: Message[]) => {
     try {
       const botResponse = await sendChatMessage(updatedChatHistory);
+      setIsWaiting(false);
 
       if (botResponse?.response) {
         const newBotMessage: Message = {
@@ -135,6 +138,7 @@ I'll parse everything and ask for your approval before saving!`,
           },
         ],
       };
+      setIsWaiting(false);
       setMessages((prev) => [...prev, newBotError]);
       console.error("Error sending chat message:", err);
     }
@@ -168,6 +172,7 @@ I'll parse everything and ask for your approval before saving!`,
       const updatedChatHistory = [...chatHistory, newMessage];
       setMessages((prev) => [...prev, newMessage]);
       setChatHistory(updatedChatHistory);
+      setIsWaiting(true);
 
       await handleBotResponse(updatedChatHistory);
     } catch (err) {
@@ -180,6 +185,7 @@ I'll parse everything and ask for your approval before saving!`,
           },
         ],
       };
+      setIsWaiting(false);
       setMessages((prev) => [...prev, newBotError]);
       console.error("Error handling recorded audio:", err);
     }
@@ -200,7 +206,14 @@ I'll parse everything and ask for your approval before saving!`,
       }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Reuse existing stream if available and active, otherwise get a new one
+        // This prevents Android from re-prompting for permission on every click
+        let stream = streamRef.current;
+        if (!stream || stream.getTracks().every(t => t.readyState === "ended")) {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          streamRef.current = stream;
+        }
+
         const recorder = new MediaRecorder(stream);
         mediaRecorderRef.current = recorder;
         chunksRef.current = [];
@@ -212,9 +225,11 @@ I'll parse everything and ask for your approval before saving!`,
         };
 
         recorder.onstop = async () => {
-          stream.getTracks().forEach((t) => t.stop());
+          // Don't stop the stream tracks here - keep them active for reuse
           const blob = new Blob(chunksRef.current, { type: "audio/webm" });
           chunksRef.current = [];
+          setIsRecording(false);
+          setIsWaiting(true); // Set waiting immediately so button is disabled
           setStatus("Processing your audio...");
           await handleRecordedAudio(blob);
           setStatus("Tap the microphone to speak again.");
@@ -225,6 +240,11 @@ I'll parse everything and ask for your approval before saving!`,
         setStatus("Listening... Tap again to stop.");
       } catch (err) {
         console.error("Error starting recording:", err);
+        // Clear stream reference on error
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+        }
         setStatus(
           "Could not access microphone. Please check your browser settings."
         );
@@ -235,8 +255,19 @@ I'll parse everything and ask for your approval before saving!`,
         recorder.stop();
       }
       setIsRecording(false);
+      setIsWaiting(true); // Set waiting immediately so button is disabled while processing
     }
   };
+
+  // Cleanup stream when component unmounts
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -366,6 +397,13 @@ I'll parse everything and ask for your approval before saving!`,
                   </div>
                 );
               })}
+              {isWaiting && (
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-2xl bg-[#E0E0E0] px-3 py-2 text-xs text-zinc-900">
+                    <p>Please wait for a reply...</p>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </>
           )}
@@ -376,8 +414,13 @@ I'll parse everything and ask for your approval before saving!`,
         <button
           type="button"
           onClick={handleToggleRecording}
+          disabled={isWaiting}
           className={`flex h-16 w-16 items-center justify-center rounded-full text-white shadow-md transition ${
-            isRecording ? "bg-red-600" : "bg-emerald-600"
+            isWaiting
+              ? "bg-zinc-400 cursor-not-allowed"
+              : isRecording
+              ? "bg-red-600"
+              : "bg-emerald-600"
           }`}
         >
           <span className="text-2xl">🎤</span>
@@ -397,18 +440,38 @@ function AudioPlayer({
   audioUrls: Map<string, string>;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrl = audioUrls.get(audioId);
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (!audioRef.current || !audioUrl) return;
 
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+      try {
+        setIsLoading(true);
+        // Mobile browsers (especially iOS) require promise-based play()
+        await audioRef.current.play();
+        setIsPlaying(true);
+        setIsLoading(false);
+      } catch (err) {
+        console.error("Error playing audio:", err);
+        setIsLoading(false);
+        setIsPlaying(false);
+        // On mobile, if play fails, try loading first
+        if (audioRef.current) {
+          audioRef.current.load();
+          try {
+            await audioRef.current.play();
+            setIsPlaying(true);
+          } catch (retryErr) {
+            console.error("Retry play failed:", retryErr);
+          }
+        }
+      }
     }
   };
 
@@ -416,10 +479,38 @@ function AudioPlayer({
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleEnded = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setIsLoading(false);
+    };
+    
+    const handleCanPlay = () => {
+      setIsLoading(false);
+    };
+
+    const handleError = () => {
+      setIsPlaying(false);
+      setIsLoading(false);
+      console.error("Audio playback error");
+    };
+
     audio.addEventListener("ended", handleEnded);
-    return () => audio.removeEventListener("ended", handleEnded);
+    audio.addEventListener("canplay", handleCanPlay);
+    audio.addEventListener("error", handleError);
+    
+    return () => {
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("error", handleError);
+    };
   }, []);
+
+  // Load audio when URL changes
+  useEffect(() => {
+    if (audioRef.current && audioUrl) {
+      audioRef.current.load();
+    }
+  }, [audioUrl]);
 
   if (!audioUrl) {
     return <p className="text-xs text-zinc-500">Audio unavailable</p>;
@@ -427,13 +518,19 @@ function AudioPlayer({
 
   return (
     <div className="flex items-center gap-2">
-      <audio ref={audioRef} src={audioUrl} />
+      <audio 
+        ref={audioRef} 
+        src={audioUrl}
+        preload="metadata"
+        playsInline // Important for iOS
+      />
       <button
         type="button"
         onClick={togglePlay}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white"
+        disabled={isLoading}
+        className={`flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white disabled:opacity-50`}
       >
-        {isPlaying ? "⏸" : "▶"}
+        {isLoading ? "⏳" : isPlaying ? "⏸" : "▶"}
       </button>
       <span className="text-xs text-zinc-600">Voice message</span>
     </div>

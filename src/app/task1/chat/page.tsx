@@ -29,7 +29,7 @@ export default function Task1ChatPage() {
       const end = performance.now();
       setTask1DurationMs(end - startTime);
     }
-    router.push("/task1/end");
+    router.push("/task1/questions");
   };
 
   return (
@@ -75,10 +75,12 @@ I'll parse everything and ask for your approval before saving!`,
   ]);
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   const handleBotResponse = async (updatedChatHistory: Message[]) => {
     try {
       const botResponse = await sendChatMessage(updatedChatHistory);
+      setIsWaiting(false);
 
       if (botResponse?.response) {
         const newBotMessage: Message = {
@@ -128,6 +130,7 @@ I'll parse everything and ask for your approval before saving!`,
           },
         ],
       };
+      setIsWaiting(false);
       setMessages((prev) => [...prev, newBotError]);
       console.error("Error sending chat message:", err);
     }
@@ -147,6 +150,7 @@ I'll parse everything and ask for your approval before saving!`,
     setChatHistory(updatedChatHistory);
     setMessageInput("");
     setInputHeight(40);
+    setIsWaiting(true);
 
     await handleBotResponse(updatedChatHistory);
   };
@@ -276,6 +280,13 @@ I'll parse everything and ask for your approval before saving!`,
                   </div>
                 );
               })}
+              {isWaiting && (
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-2xl bg-[#E0E0E0] px-3 py-2 text-xs text-zinc-900">
+                    <p>Please wait for a reply...</p>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </>
           )}
@@ -297,7 +308,10 @@ I'll parse everything and ask for your approval before saving!`,
         <button
           type="button"
           onClick={handleSend}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white"
+          disabled={isWaiting}
+          className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-white ${
+            isWaiting ? "bg-zinc-400 cursor-not-allowed" : "bg-zinc-900"
+          }`}
           aria-label="Send message"
         >
           <svg

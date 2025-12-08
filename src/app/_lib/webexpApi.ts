@@ -41,7 +41,7 @@ export async function checkBackendConnection(): Promise<{
 }
 
 // Create task (and auto-create user if needed)
-export async function createTask(userId: string, taskNumber: number) {
+export async function createTask(userId: string, taskNumber: number, deviceType: "mobile" | "desktop" = "mobile") {
   const response = await fetch(`${WEBEXP_API_URL}/webexp/tasks/`, {
     method: "POST",
     headers: {
@@ -52,6 +52,7 @@ export async function createTask(userId: string, taskNumber: number) {
       user_id: userId,
       task_number: taskNumber,
       time_taken_seconds: null,
+      device_type: deviceType,
     }),
   });
 
@@ -128,6 +129,38 @@ export async function createBulkExpenditures(
   if (!response.ok) {
     const errText = await response.text();
     throw new Error(`Create bulk expenditures error: ${errText}`);
+  }
+
+  return await response.json();
+}
+
+// Update task questions
+// Pass task_id along with user_id and task_number for specificity
+export async function updateTaskQuestions(
+  taskId: string,
+  userId: string,
+  taskNumber: number,
+  question1: number,
+  question2: number
+) {
+  const response = await fetch(`${WEBEXP_API_URL}/webexp/tasks/questions/`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${WEBEXP_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      task_id: taskId,
+      user_id: userId,
+      task_number: taskNumber,
+      question1: question1,
+      question2: question2,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Update task questions error: ${errText}`);
   }
 
   return await response.json();
