@@ -43,7 +43,7 @@ export default function Task3IdPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col bg-white px-4 py-6 text-sm text-zinc-900">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col bg-white px-4 py-6 pb-12 text-sm text-zinc-900">
       <header className="mb-4 text-center">
         <h1 className="text-xl font-semibold">TalkCents Web Experiment</h1>
         <p className="mt-1 text-xs text-zinc-500">Task 3: Manual Entry</p>

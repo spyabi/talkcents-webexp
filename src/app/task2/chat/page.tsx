@@ -440,37 +440,30 @@ function AudioPlayer({
   audioUrls: Map<string, string>;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrl = audioUrls.get(audioId);
 
-  const togglePlay = async () => {
+  const togglePlay = () => {
     if (!audioRef.current || !audioUrl) return;
 
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      try {
-        setIsLoading(true);
-        // Mobile browsers (especially iOS) require promise-based play()
-        await audioRef.current.play();
-        setIsPlaying(true);
-        setIsLoading(false);
-      } catch (err) {
-        console.error("Error playing audio:", err);
-        setIsLoading(false);
-        setIsPlaying(false);
-        // On mobile, if play fails, try loading first
-        if (audioRef.current) {
-          audioRef.current.load();
-          try {
-            await audioRef.current.play();
+      // Use promise-based play for mobile compatibility
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
             setIsPlaying(true);
-          } catch (retryErr) {
-            console.error("Retry play failed:", retryErr);
-          }
-        }
+          })
+          .catch((err) => {
+            console.error("Error playing audio:", err);
+            setIsPlaying(false);
+          });
+      } else {
+        // Fallback for browsers that don't return a promise
+        setIsPlaying(true);
       }
     }
   };
@@ -479,38 +472,20 @@ function AudioPlayer({
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setIsLoading(false);
-    };
-    
-    const handleCanPlay = () => {
-      setIsLoading(false);
-    };
-
-    const handleError = () => {
-      setIsPlaying(false);
-      setIsLoading(false);
-      console.error("Audio playback error");
-    };
+    const handleEnded = () => setIsPlaying(false);
+    const handlePause = () => setIsPlaying(false);
+    const handlePlay = () => setIsPlaying(true);
 
     audio.addEventListener("ended", handleEnded);
-    audio.addEventListener("canplay", handleCanPlay);
-    audio.addEventListener("error", handleError);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("play", handlePlay);
     
     return () => {
       audio.removeEventListener("ended", handleEnded);
-      audio.removeEventListener("canplay", handleCanPlay);
-      audio.removeEventListener("error", handleError);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("play", handlePlay);
     };
   }, []);
-
-  // Load audio when URL changes
-  useEffect(() => {
-    if (audioRef.current && audioUrl) {
-      audioRef.current.load();
-    }
-  }, [audioUrl]);
 
   if (!audioUrl) {
     return <p className="text-xs text-zinc-500">Audio unavailable</p>;
@@ -521,16 +496,16 @@ function AudioPlayer({
       <audio 
         ref={audioRef} 
         src={audioUrl}
-        preload="metadata"
-        playsInline // Important for iOS
+        preload="auto"
+        playsInline
+        controls={false}
       />
       <button
         type="button"
         onClick={togglePlay}
-        disabled={isLoading}
-        className={`flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white disabled:opacity-50`}
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white active:bg-emerald-700"
       >
-        {isLoading ? "⏳" : isPlaying ? "⏸" : "▶"}
+        {isPlaying ? "⏸" : "▶"}
       </button>
       <span className="text-xs text-zinc-600">Voice message</span>
     </div>
