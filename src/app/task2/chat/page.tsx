@@ -83,6 +83,7 @@ I'll parse everything and ask for your approval before saving!`,
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const handleBotResponse = async (updatedChatHistory: Message[]) => {
     try {
@@ -205,7 +206,14 @@ I'll parse everything and ask for your approval before saving!`,
       }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Reuse existing stream if available and active, otherwise get a new one
+        // This prevents Android from re-prompting for permission on every click
+        let stream = streamRef.current;
+        if (!stream || stream.getTracks().every(t => t.readyState === "ended")) {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          streamRef.current = stream;
+        }
+
         const recorder = new MediaRecorder(stream);
         mediaRecorderRef.current = recorder;
         chunksRef.current = [];
@@ -217,7 +225,7 @@ I'll parse everything and ask for your approval before saving!`,
         };
 
         recorder.onstop = async () => {
-          stream.getTracks().forEach((t) => t.stop());
+          // Don't stop the stream tracks here - keep them active for reuse
           const blob = new Blob(chunksRef.current, { type: "audio/webm" });
           chunksRef.current = [];
           setIsRecording(false);
@@ -232,6 +240,11 @@ I'll parse everything and ask for your approval before saving!`,
         setStatus("Listening... Tap again to stop.");
       } catch (err) {
         console.error("Error starting recording:", err);
+        // Clear stream reference on error
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+        }
         setStatus(
           "Could not access microphone. Please check your browser settings."
         );
@@ -245,6 +258,16 @@ I'll parse everything and ask for your approval before saving!`,
       setIsWaiting(true); // Set waiting immediately so button is disabled while processing
     }
   };
+
+  // Cleanup stream when component unmounts
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
