@@ -21,25 +21,13 @@ export default function Task1EndPage() {
   const hasSubmitted = useRef(false);
 
   useEffect(() => {
-    const durationMs = getTask1DurationMs();
     const id = getParticipantId();
-    const taskId = getTask1TaskId();
     
-    setDuration(durationMs);
     setParticipantIdState(id);
     
     // Generate completion code
     const code = `T1-${id || "XXX"}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
     setCompletionCode(code);
-    
-    // Submit time to backend (only once) - pass task_id, user_id, and task_number
-    if (!hasSubmitted.current && taskId && id && durationMs != null) {
-      hasSubmitted.current = true;
-      const timeSeconds = Math.round(durationMs / 1000);
-      updateTaskTime(taskId, id, 1, timeSeconds).catch((err) => {
-        console.error("Failed to update task time:", err);
-      });
-    }
   }, []);
 
   return (
@@ -78,13 +66,6 @@ export default function Task1EndPage() {
               <span className="font-medium">{participantIdState}</span>
             </div>
           )}
-          
-          <div className="flex justify-between">
-            <span className="text-zinc-500">Time taken</span>
-            <span className="font-medium">
-              {duration != null ? formatDuration(duration) : "—"}
-            </span>
-          </div>
         </div>
 
         <div className="rounded-xl bg-emerald-50 p-4 text-center">

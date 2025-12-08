@@ -29,7 +29,7 @@ export default function Task2ChatPage() {
       const end = performance.now();
       setTask2DurationMs(end - startTime);
     }
-    router.push("/task2/end");
+    router.push("/task2/questions");
   };
 
   return (
@@ -79,6 +79,7 @@ I'll parse everything and ask for your approval before saving!`,
   const [audioUrls, setAudioUrls] = useState<Map<string, string>>(new Map());
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -86,6 +87,7 @@ I'll parse everything and ask for your approval before saving!`,
   const handleBotResponse = async (updatedChatHistory: Message[]) => {
     try {
       const botResponse = await sendChatMessage(updatedChatHistory);
+      setIsWaiting(false);
 
       if (botResponse?.response) {
         const newBotMessage: Message = {
@@ -135,6 +137,7 @@ I'll parse everything and ask for your approval before saving!`,
           },
         ],
       };
+      setIsWaiting(false);
       setMessages((prev) => [...prev, newBotError]);
       console.error("Error sending chat message:", err);
     }
@@ -168,6 +171,7 @@ I'll parse everything and ask for your approval before saving!`,
       const updatedChatHistory = [...chatHistory, newMessage];
       setMessages((prev) => [...prev, newMessage]);
       setChatHistory(updatedChatHistory);
+      setIsWaiting(true);
 
       await handleBotResponse(updatedChatHistory);
     } catch (err) {
@@ -180,6 +184,7 @@ I'll parse everything and ask for your approval before saving!`,
           },
         ],
       };
+      setIsWaiting(false);
       setMessages((prev) => [...prev, newBotError]);
       console.error("Error handling recorded audio:", err);
     }
@@ -215,6 +220,8 @@ I'll parse everything and ask for your approval before saving!`,
           stream.getTracks().forEach((t) => t.stop());
           const blob = new Blob(chunksRef.current, { type: "audio/webm" });
           chunksRef.current = [];
+          setIsRecording(false);
+          setIsWaiting(true); // Set waiting immediately so button is disabled
           setStatus("Processing your audio...");
           await handleRecordedAudio(blob);
           setStatus("Tap the microphone to speak again.");
@@ -235,6 +242,7 @@ I'll parse everything and ask for your approval before saving!`,
         recorder.stop();
       }
       setIsRecording(false);
+      setIsWaiting(true); // Set waiting immediately so button is disabled while processing
     }
   };
 
@@ -366,6 +374,13 @@ I'll parse everything and ask for your approval before saving!`,
                   </div>
                 );
               })}
+              {isWaiting && (
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-2xl bg-[#E0E0E0] px-3 py-2 text-xs text-zinc-900">
+                    <p>Please wait for a reply...</p>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </>
           )}
@@ -376,8 +391,13 @@ I'll parse everything and ask for your approval before saving!`,
         <button
           type="button"
           onClick={handleToggleRecording}
+          disabled={isWaiting}
           className={`flex h-16 w-16 items-center justify-center rounded-full text-white shadow-md transition ${
-            isRecording ? "bg-red-600" : "bg-emerald-600"
+            isWaiting
+              ? "bg-zinc-400 cursor-not-allowed"
+              : isRecording
+              ? "bg-red-600"
+              : "bg-emerald-600"
           }`}
         >
           <span className="text-2xl">🎤</span>

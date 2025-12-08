@@ -22,49 +22,16 @@ export default function Task3EndPage() {
   const hasSubmitted = useRef(false);
 
   useEffect(() => {
-    const durationMs = getTask3DurationMs();
     const id = getParticipantId();
-    const taskId = getTask3TaskId();
     const entries = getTask3Entries();
     const count = getTask3EntriesCount();
     
-    setDuration(durationMs);
     setParticipantIdState(id);
     setEntriesCount(count);
     
     // Generate completion code
     const code = `T3-${id || "XXX"}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
     setCompletionCode(code);
-    
-    // Submit data to backend (only once) - requires task_id, user_id
-    if (!hasSubmitted.current && taskId && id && durationMs != null) {
-      hasSubmitted.current = true;
-      
-      const submitData = async () => {
-        try {
-          // Update task time - pass task_id, user_id, and task_number
-          const timeSeconds = Math.round(durationMs / 1000);
-          await updateTaskTime(taskId, id, 3, timeSeconds);
-          
-          // Submit expenditures if any - pass task_id, user_id, and task_number
-          if (entries.length > 0) {
-            const expenditures: ExpenditureItem[] = entries.map((e) => ({
-              name: e.name,
-              date_of_expense: e.date, // Already in YYYY-MM-DD format
-              amount: parseFloat(e.amount.replace("$", "")),
-              category: e.category || undefined,
-              notes: e.note || undefined,
-              status: "Pending",
-            }));
-            await createBulkExpenditures(taskId, id, 3, expenditures);
-          }
-        } catch (err) {
-          console.error("Failed to submit task data:", err);
-        }
-      };
-      
-      submitData();
-    }
   }, []);
 
   return (
@@ -103,13 +70,6 @@ export default function Task3EndPage() {
               <span className="font-medium">{participantIdState}</span>
             </div>
           )}
-          
-          <div className="flex justify-between">
-            <span className="text-zinc-500">Time taken</span>
-            <span className="font-medium">
-              {duration != null ? formatDuration(duration) : "—"}
-            </span>
-          </div>
           
           <div className="flex justify-between">
             <span className="text-zinc-500">Entries added</span>
