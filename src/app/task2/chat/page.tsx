@@ -344,6 +344,14 @@ I'll parse everything and ask for your approval before saving!`,
           Tap the microphone button to start and stop recording. When expenses are shown, tap{" "}
           <span className="font-medium">Approve All</span> to complete the task.
         </p>
+        <div className="rounded-md bg-blue-50 p-3">
+          <p className="text-xs font-semibold text-blue-900 mb-2">Expenses to log:</p>
+          <ul className="text-xs text-blue-800 space-y-1">
+            <li>• Steak dinner $60</li>
+            <li>• Ice cream $5.50</li>
+            <li>• Taxi $18.90</li>
+          </ul>
+        </div>
       </div>
 
       <div
@@ -443,26 +451,46 @@ function AudioPlayer({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrl = audioUrls.get(audioId);
 
-  const togglePlay = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  // Handle play/pause toggle - similar to the working example
+  const handlePlayPause = () => {
     if (!audioRef.current || !audioUrl) return;
 
-    try {
-      if (isPlaying) {
-        audioRef.current.pause();
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      // Use promise-based play for iOS compatibility
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch((err) => {
+            console.error("Error playing audio:", err);
+            setIsPlaying(false);
+          });
       } else {
-        await audioRef.current.play();
+        setIsPlaying(true);
       }
-    } catch (err) {
-      console.error("Error playing audio:", err);
     }
   };
 
+  // Update audio source when URL changes (like the working example)
+  useEffect(() => {
+    if (audioRef.current && audioUrl) {
+      audioRef.current.pause();
+      audioRef.current.src = audioUrl;
+      audioRef.current.load(); // Important for iOS
+      audioRef.current.currentTime = 0;
+      setIsPlaying(false);
+    }
+  }, [audioUrl]);
+
+  // Handle audio events
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !audioUrl) return;
+    if (!audio) return;
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
@@ -471,13 +499,13 @@ function AudioPlayer({
     audio.addEventListener("play", handlePlay);
     audio.addEventListener("pause", handlePause);
     audio.addEventListener("ended", handleEnded);
-    
+
     return () => {
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [audioUrl]);
+  }, []);
 
   if (!audioUrl) {
     return <p className="text-xs text-zinc-500">Audio unavailable</p>;
@@ -486,14 +514,12 @@ function AudioPlayer({
   return (
     <div className="flex items-center gap-2">
       <audio 
-        ref={audioRef} 
-        src={audioUrl}
-        preload="metadata"
+        ref={audioRef}
         playsInline
       />
       <button
         type="button"
-        onClick={togglePlay}
+        onClick={handlePlayPause}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-700 active:scale-95"
       >
         <span className="text-base">{isPlaying ? "⏸" : "▶"}</span>

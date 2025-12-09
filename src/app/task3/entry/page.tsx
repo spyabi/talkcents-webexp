@@ -130,6 +130,15 @@ export default function Task3EntryPage() {
 
       {/* Form */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="rounded-md bg-blue-50 p-3">
+          <p className="text-xs font-semibold text-blue-900 mb-2">Expenses to log:</p>
+          <ul className="text-xs text-blue-800 space-y-1">
+            <li>• Steak dinner $60</li>
+            <li>• Ice cream $5.50</li>
+            <li>• Taxi $18.90</li>
+          </ul>
+        </div>
+
         {/* Type Toggle */}
         <div className="flex justify-center gap-3">
           <button

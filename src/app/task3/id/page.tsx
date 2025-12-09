@@ -12,6 +12,7 @@ export default function Task3IdPage() {
   const [inputId, setInputId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasReadInstructions, setHasReadInstructions] = useState(false);
 
   const handleSubmit = async () => {
     const trimmed = inputId.trim();
@@ -70,27 +71,39 @@ export default function Task3IdPage() {
           <h3 className="text-sm font-semibold text-blue-900">Task Instructions</h3>
           <div className="mt-2 space-y-2 text-sm text-blue-800">
             <p>
-              In this task, you will <span className="font-medium">manually enter 3 expenses</span> using
-              a form interface.
+              In this task, you will <span className="font-medium">manually enter expenses</span> using a form interface to log your daily expenses.
             </p>
-            <p>For each expense, you will need to provide:</p>
+            <p className="font-medium">Scenario: you just got back home from dinner and need to log your expenses.</p>
+            <p>You need to log the following expenses:</p>
             <ul className="ml-4 list-disc space-y-1">
-              <li>Name of the expense</li>
-              <li>Date of the expense</li>
-              <li>Amount</li>
-              <li>Category</li>
-              <li>Optional note</li>
+              <li>Steak dinner $60</li>
+              <li>Ice cream $5.50</li>
+              <li>Taxi $18.90</li>
             </ul>
+            <p>For each expense, you will need to provide:</p>
             <p className="font-medium">
-              You must add exactly 3 entries to complete this task.
+              You need to log your expenses as fast as possible and you will be timed for this. You must add exactly 3 entries to complete this task.
             </p>
           </div>
+        </div>
+
+        <div className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            id="instructions-checkbox-3"
+            checked={hasReadInstructions}
+            onChange={(e) => setHasReadInstructions(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+          />
+          <label htmlFor="instructions-checkbox-3" className="text-sm text-zinc-700 cursor-pointer">
+            I have read the instructions and know that this is a timed experiment
+          </label>
         </div>
 
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!inputId.trim() || isLoading}
+          disabled={!inputId.trim() || !hasReadInstructions || isLoading}
           className="w-full inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-emerald-200 disabled:cursor-not-allowed"
         >
           {isLoading ? "Registering..." : "Continue to Task"}

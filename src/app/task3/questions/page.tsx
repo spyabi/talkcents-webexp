@@ -147,7 +147,7 @@ export default function Task3QuestionsPage() {
         <div className="space-y-6">
           <div className="space-y-3">
             <h2 className="text-base font-semibold">1. Satisfaction</h2>
-            <p className="text-sm text-zinc-600">How satisfied were you with this method?</p>
+            <p className="text-sm text-zinc-600">How satisfied were you with this method of logging expenses?</p>
             <StarRating
               value={question1}
               onChange={setQuestion1}
@@ -157,7 +157,7 @@ export default function Task3QuestionsPage() {
 
           <div className="space-y-3">
             <h2 className="text-base font-semibold">2. Adoption</h2>
-            <p className="text-sm text-zinc-600">Would you use this method in real life?</p>
+            <p className="text-sm text-zinc-600">Would you use this method in real life to log your daily expenses?</p>
             <StarRating
               value={question2}
               onChange={setQuestion2}

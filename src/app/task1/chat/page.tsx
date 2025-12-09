@@ -230,6 +230,14 @@ I'll parse everything and ask for your approval before saving!`,
           your responses. When expenses are shown, tap{" "}
           <span className="font-medium">Approve All</span> to complete the task.
         </p>
+        <div className="rounded-md bg-blue-50 p-3">
+          <p className="text-xs font-semibold text-blue-900 mb-2">Expenses to log:</p>
+          <ul className="text-xs text-blue-800 space-y-1">
+            <li>• Steak dinner $60</li>
+            <li>• Ice cream $5.50</li>
+            <li>• Taxi $18.90</li>
+          </ul>
+        </div>
       </div>
 
       <div
