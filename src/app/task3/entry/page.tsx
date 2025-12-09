@@ -14,6 +14,15 @@ import {
 const FIXED_CATEGORIES = ["Food & Drinks", "Shopping", "Transport", "Others"];
 const REQUIRED_ENTRIES = 3;
 
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export default function Task3EntryPage() {
   const router = useRouter();
   const [participantId, setParticipantIdState] = useState<string | null>(null);
@@ -24,7 +33,7 @@ export default function Task3EntryPage() {
   const [type, setType] = useState<"Income" | "Expense">("Expense");
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(getTodayDate());
   const [category, setCategory] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -65,7 +74,7 @@ export default function Task3EntryPage() {
     setType("Expense");
     setName("");
     setAmount("");
-    setDate("");
+    setDate(getTodayDate());
     setCategory(null);
     setNote("");
     setErrors({ name: false, date: false, amount: false, category: false });
