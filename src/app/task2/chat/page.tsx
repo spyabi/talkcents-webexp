@@ -85,6 +85,51 @@ I'll parse everything and ask for your approval before saving!`,
   const chunksRef = useRef<BlobPart[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // iOS detection
+  const isIos = (() => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent || (navigator as any).vendor || (window as any).opera || "";
+    return /iPad|iPhone|iPod/.test(ua) && !("MSStream" in window);
+  })();
+
+  // Choose MIME type for MediaRecorder
+  const chooseMimeType = () => {
+    if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
+      return "";
+    }
+    const candidates = [
+      'audio/mp4; codecs="mp4a.40.2"',
+      'audio/mp4',
+      'audio/mpeg',
+      'audio/webm;codecs=opus',
+      'audio/webm'
+    ];
+    for (const c of candidates) {
+      try {
+        if (MediaRecorder.isTypeSupported(c)) return c;
+      } catch {
+        // ignore
+      }
+    }
+    return "";
+  };
+
+  // Start recording - get fresh stream
+  const startRecording = async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setStatus("Microphone not available in this browser.");
+      return null;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      return stream;
+    } catch (err) {
+      console.error("getUserMedia failed:", err);
+      setStatus("Could not access microphone. Please check your browser settings.");
+      return null;
+    }
+  };
+
   const handleBotResponse = async (updatedChatHistory: Message[]) => {
     try {
       const botResponse = await sendChatMessage(updatedChatHistory);
@@ -145,37 +190,51 @@ I'll parse everything and ask for your approval before saving!`,
   };
 
   const handleRecordedAudio = async (audioBlob: Blob) => {
-    // Create a URL for the audio blob so it can be played back
+    // Create a URL and an id immediately so the UI can play the audio
     const audioUrl = URL.createObjectURL(audioBlob);
     const audioId = `audio-${Date.now()}`;
-    
-    // Store the URL for cleanup later
-    setAudioUrls((prev) => new Map(prev).set(audioId, audioUrl));
 
-    // Add audio message to UI immediately
+    // store URL
+    setAudioUrls((prev) => {
+      const next = new Map(prev);
+      next.set(audioId, audioUrl);
+      return next;
+    });
+
+    // add audio message (user)
     const audioMessage: Message = {
       role: "user",
       content: [{ type: "audio", audioUri: audioId }],
     };
     setMessages((prev) => [...prev, audioMessage]);
 
+    // Now transcribe (this is async)
     try {
       const transcription = await transcribeAudio(audioBlob);
-      const text = transcription.transcription;
-      if (!text) return;
+      const text = transcription?.transcription || "";
 
-      const newMessage: Message = {
-        role: "user",
-        content: [{ type: "text", text }],
-      };
+      if (text) {
+        const newMessage: Message = {
+          role: "user",
+          content: [{ type: "text", text }],
+        };
 
-      const updatedChatHistory = [...chatHistory, newMessage];
-      setMessages((prev) => [...prev, newMessage]);
-      setChatHistory(updatedChatHistory);
-      setIsWaiting(true);
+        const updatedChatHistory = [...chatHistory, newMessage];
+        setMessages((prev) => [...prev, newMessage]);
+        setChatHistory(updatedChatHistory);
+        setIsWaiting(true);
 
-      await handleBotResponse(updatedChatHistory);
+        await handleBotResponse(updatedChatHistory);
+      } else {
+        // If no transcription, still call bot with original audio message omitted (or add a message)
+        const errMsg: Message = {
+          role: "assistant",
+          content: [{ type: "text", text: "Couldn't transcribe that. Please try again." }],
+        };
+        setMessages((prev) => [...prev, errMsg]);
+      }
     } catch (err) {
+      console.error("Error handling recorded audio:", err);
       const newBotError: Message = {
         role: "assistant",
         content: [
@@ -185,9 +244,9 @@ I'll parse everything and ask for your approval before saving!`,
           },
         ],
       };
-      setIsWaiting(false);
       setMessages((prev) => [...prev, newBotError]);
-      console.error("Error handling recorded audio:", err);
+    } finally {
+      setIsWaiting(false);
     }
   };
 
@@ -199,71 +258,131 @@ I'll parse everything and ask for your approval before saving!`,
   }, [audioUrls]);
 
   const handleToggleRecording = async () => {
+    // if currently not recording -> start
     if (!isRecording) {
-      if (typeof navigator === "undefined" || !navigator.mediaDevices) {
-        setStatus("Microphone not available in this browser.");
-        return;
+      setStatus("Requesting microphone...");
+      const stream = await startRecording();
+      if (!stream) return;
+
+      // Save stream depending on platform
+      if (!isIos) {
+        // reuse on non-iOS to avoid repeated permission prompts
+        streamRef.current = stream;
+      } else {
+        // on iOS we won't reuse (won't store in streamRef)
+        streamRef.current = null;
       }
 
-      try {
-        // Reuse existing stream if available and active, otherwise get a new one
-        // This prevents Android from re-prompting for permission on every click
-        let stream = streamRef.current;
-        if (!stream || stream.getTracks().every(t => t.readyState === "ended")) {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          streamRef.current = stream;
-        }
+      const mimeType = chooseMimeType();
+      let recorder: MediaRecorder;
 
-        const recorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = recorder;
+      try {
+        recorder = mimeType ? new MediaRecorder(stream, { mimeType } as MediaRecorderOptions) : new MediaRecorder(stream);
+      } catch (err) {
+        // fallback to default constructor if options fail
+        console.warn("MediaRecorder constructor with mimeType failed, using default:", err);
+        try {
+          recorder = new MediaRecorder(stream);
+        } catch (err2) {
+          console.error("MediaRecorder not available:", err2);
+          setStatus("Recording not supported in this browser.");
+          // stop tracks if we created them here
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+      }
+
+      mediaRecorderRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        // create the blob using the recorder's mimeType (best available)
+        const blobType = (recorder && (recorder as any).mimeType) || mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: blobType });
         chunksRef.current = [];
 
-        recorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            chunksRef.current.push(event.data);
+        // Stop the stream tracks if we fetched a fresh one on iOS,
+        // or if we decided not to reuse it.
+        if (isIos) {
+          try {
+            stream.getTracks().forEach((t) => t.stop());
+          } catch (e) {
+            // ignore
           }
-        };
+        } else {
+          // On non-iOS, keep streamRef.current active for reuse
+          // but if it isn't the same stream, ensure we don't leak
+          if (streamRef.current && streamRef.current !== stream) {
+            stream.getTracks().forEach((t) => t.stop());
+          }
+        }
 
-        recorder.onstop = async () => {
-          // Don't stop the stream tracks here - keep them active for reuse
-          const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-          chunksRef.current = [];
-          setIsRecording(false);
-          setIsWaiting(true); // Set waiting immediately so button is disabled
-          setStatus("Processing your audio...");
+        setIsRecording(false);
+        setIsWaiting(true);
+        setStatus("Processing your audio...");
+        try {
           await handleRecordedAudio(blob);
+        } finally {
           setStatus("Tap the microphone to speak again.");
-        };
+        }
+      };
 
+      recorder.onerror = (e) => {
+        console.error("MediaRecorder error:", e);
+      };
+
+      try {
         recorder.start();
         setIsRecording(true);
         setStatus("Listening... Tap again to stop.");
       } catch (err) {
-        console.error("Error starting recording:", err);
-        // Clear stream reference on error
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((t) => t.stop());
-          streamRef.current = null;
-        }
-        setStatus(
-          "Could not access microphone. Please check your browser settings."
-        );
+        console.error("recorder.start() failed:", err);
+        setStatus("Could not start recording.");
+        // cleanup
+        try {
+          stream.getTracks().forEach((t) => t.stop());
+        } catch {}
+        setIsRecording(false);
       }
     } else {
+      // stop recording
       const recorder = mediaRecorderRef.current;
       if (recorder && recorder.state !== "inactive") {
-        recorder.stop();
+        // stopping triggers onstop which handles blob + rest
+        try {
+          recorder.stop();
+        } catch (err) {
+          console.error("Error stopping recorder:", err);
+        }
+      } else {
+        // nothing to stop, but ensure flags are reset
+        setIsRecording(false);
+        setIsWaiting(false);
+        setStatus("Tap the microphone to speak.");
       }
-      setIsRecording(false);
-      setIsWaiting(true); // Set waiting immediately so button is disabled while processing
     }
   };
 
-  // Cleanup stream when component unmounts
+  // Clean up when component unmounts
   useEffect(() => {
     return () => {
+      try {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+          mediaRecorderRef.current.stop();
+        }
+      } catch {}
+
+      // If we kept a stream around for reuse on non-iOS, stop it now
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+        try {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+        } catch {}
         streamRef.current = null;
       }
     };
@@ -440,72 +559,87 @@ I'll parse everything and ask for your approval before saving!`,
 }
 
 // Audio player component for playing back recorded audio
-function AudioPlayer({ 
-  audioId, 
-  audioUrls 
-}: { 
-  audioId: string; 
+function AudioPlayer({
+  audioId,
+  audioUrls,
+}: {
+  audioId: string;
   audioUrls: Map<string, string>;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Grab URL once (derived from prop map)
   const audioUrl = audioUrls.get(audioId);
 
-  // Handle play/pause toggle - similar to the working example
+  // When audioUrl changes, update element source synchronously
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (!audioUrl) {
+      a.pause();
+      a.removeAttribute("src");
+      a.load();
+      setIsPlaying(false);
+      return;
+    }
+
+    // Assign src synchronously so the following click is treated as user gesture
+    a.pause();
+    a.src = audioUrl;
+    a.preload = "metadata";
+    a.load();
+    a.currentTime = 0;
+    setIsPlaying(false);
+  }, [audioUrl]);
+
+  // wire up events
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => setIsPlaying(false);
+
+    a.addEventListener("play", onPlay);
+    a.addEventListener("pause", onPause);
+    a.addEventListener("ended", onEnded);
+
+    return () => {
+      a.removeEventListener("play", onPlay);
+      a.removeEventListener("pause", onPause);
+      a.removeEventListener("ended", onEnded);
+    };
+  }, []);
+
+  // Play/pause MUST be invoked synchronously from the click handler to satisfy iOS.
   const handlePlayPause = () => {
-    if (!audioRef.current || !audioUrl) return;
+    const a = audioRef.current;
+    if (!a || !audioUrl) return;
 
     if (isPlaying) {
-      audioRef.current.pause();
+      a.pause();
       setIsPlaying(false);
     } else {
-      // Use promise-based play for iOS compatibility
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
+      // Synchronous play triggered by user click — allowed on iOS
+      const playPromise = a.play();
+      if (playPromise && typeof playPromise.then === "function") {
         playPromise
-          .then(() => {
-            setIsPlaying(true);
-          })
+          .then(() => setIsPlaying(true))
           .catch((err) => {
             console.error("Error playing audio:", err);
             setIsPlaying(false);
+            // On some Safari versions, play may fail immediately — try a small delayed attempt.
+            setTimeout(() => {
+              a.play().catch(() => {});
+            }, 120);
           });
       } else {
+        // older browsers return undefined
         setIsPlaying(true);
       }
     }
   };
-
-  // Update audio source when URL changes (like the working example)
-  useEffect(() => {
-    if (audioRef.current && audioUrl) {
-      audioRef.current.pause();
-      audioRef.current.src = audioUrl;
-      audioRef.current.load(); // Important for iOS
-      audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-    }
-  }, [audioUrl]);
-
-  // Handle audio events
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => setIsPlaying(false);
-
-    audio.addEventListener("play", handlePlay);
-    audio.addEventListener("pause", handlePause);
-    audio.addEventListener("ended", handleEnded);
-
-    return () => {
-      audio.removeEventListener("play", handlePlay);
-      audio.removeEventListener("pause", handlePause);
-      audio.removeEventListener("ended", handleEnded);
-    };
-  }, []);
 
   if (!audioUrl) {
     return <p className="text-xs text-zinc-500">Audio unavailable</p>;
@@ -513,10 +647,7 @@ function AudioPlayer({
 
   return (
     <div className="flex items-center gap-2">
-      <audio 
-        ref={audioRef}
-        playsInline
-      />
+      <audio ref={audioRef} playsInline />
       <button
         type="button"
         onClick={handlePlayPause}
