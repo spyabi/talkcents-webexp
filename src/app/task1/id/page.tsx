@@ -50,7 +50,7 @@ export default function Task1IdPage() {
 
       <section className="flex-1 space-y-6">
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Enter your Participant ID</h2>
+          <h2 className="text-lg font-semibold">Enter your Prolific ID</h2>
           <input
             type="text"
             value={inputId}

@@ -71,7 +71,8 @@ export default function Task2EndPage() {
         <div className="rounded-xl bg-emerald-50 p-4 text-center">
           <p className="text-xs text-emerald-700 mb-2">Your Completion Code</p>
           <p className="text-xl font-mono font-bold text-emerald-800 tracking-wide">
-            {completionCode}
+            {/* {completionCode} */}
+            CV8LQS5W
           </p>
           <p className="text-xs text-emerald-600 mt-2">
             Please save this code and provide it to the researcher.
