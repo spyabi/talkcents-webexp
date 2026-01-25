@@ -1,4 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Project Overview
+
+This is a side project of the main project **TalkCents**. [(TalkCents Github repo)](https://github.com/spyabi/TalkCents)
+
+This Nextjs project was for a web experiment conducted on **Prolific**, a crowdsourcing platform. We ran an **A/B/C test (between-subjects design)** to gather participants’ sentiments regarding three different methods of recording their expenses. Each participant was randomly assigned to **only one method** to prevent carryover effects. The experiment was deployed on **Vercel** at the time of this project.
+
+## Web Experiment Tasks
+
+### Task 1
+[![Web Experiment Task 3](https://img.youtube.com/vi/-t7vKClsCqM/hqdefault.jpg)](https://youtube.com/shorts/-t7vKClsCqM)  
+*Click the image to watch the demo on YouTube or use the link below*
+https://youtube.com/shorts/-t7vKClsCqM
+
+### Task 2
+[![Web Experiment Task 2](https://img.youtube.com/vi/Ql1IHu67Cnk/hqdefault.jpg)](https://youtube.com/shorts/Ql1IHu67Cnk)  
+*Click the image to watch the demo on YouTube or use the link below*
+https://youtube.com/shorts/Ql1IHu67Cnk
+
+### Task 3
+[![Web Experiment Task 3](https://img.youtube.com/vi/CvBQWvOo-o8/hqdefault.jpg)](https://youtube.com/shorts/CvBQWvOo-o8)  
+*Click the image to watch the demo on YouTube or use the link below*
+https://youtube.com/shorts/CvBQWvOo-o8
+
 
 ## Getting Started
 
